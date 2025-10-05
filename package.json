@@ -1,0 +1,44 @@
+{
+  "name": "food-recalls-early-warning-qatar",
+  "version": "1.0.0",
+  "description": "نظام إنذار مبكر للاستدعاءات الغذائية العالمية - قطر",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build step required for static site'",
+    "start": "firebase serve",
+    "deploy": "firebase deploy",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:firestore": "firebase deploy --only firestore",
+    "serve": "firebase serve",
+    "emulators": "firebase emulators:start",
+    "logs": "firebase functions:log",
+    "test": "echo 'No tests specified'",
+    "lint": "cd functions && npm run lint",
+    "setup": "npm install && cd functions && npm install"
+  },
+  "keywords": [
+    "food-safety",
+    "recalls",
+    "early-warning",
+    "qatar",
+    "firebase",
+    "pwa"
+  ],
+  "author": "Food Safety Qatar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/food-safety-qatar/early-warning-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/food-safety-qatar/early-warning-system/issues"
+  },
+  "homepage": "https://food-recalls-early-warning-qatar.web.app",
+  "devDependencies": {
+    "firebase-tools": "^12.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

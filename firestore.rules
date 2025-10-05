@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // قواعد collection recalls
+    match /recalls/{docId} {
+      // السماح بالقراءة للجميع
+      allow read: if true;
+      
+      // السماح بالكتابة فقط للـ Functions المعتمدة
+      // أو المستخدمين المصرح لهم بصلاحيات الإدارة
+      allow write: if request.auth != null && 
+                   (request.auth.token.admin == true || 
+                    request.auth.token.function == true);
+    }
+    
+    // قواعد إضافية للمجموعات الأخرى إذا لزم الأمر
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // قواعد للإعدادات العامة
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

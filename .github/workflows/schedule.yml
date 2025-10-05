@@ -1,0 +1,79 @@
+name: Scheduled Food Recalls Update
+
+on:
+  schedule:
+    # تشغيل كل 10 دقائق
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # للتشغيل اليدوي
+
+jobs:
+  update-recalls:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Update Food Recalls Data
+      run: |
+        echo "🔄 بدء التحديث المجدول للاستدعاءات الغذائية..."
+        echo "⏰ الوقت: $(date)"
+        
+        # استدعاء Cloud Function للتحديث
+        response=$(curl -s -w "\n%{http_code}" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -H "User-Agent: GitHub-Actions-Scheduler/1.0" \
+          "https://us-central1-food-recalls-qatar.cloudfunctions.net/scheduledUpdate")
+        
+        # فصل الاستجابة عن كود الحالة
+        http_code=$(echo "$response" | tail -n1)
+        response_body=$(echo "$response" | head -n -1)
+        
+        echo "📊 كود الاستجابة: $http_code"
+        echo "📄 الاستجابة: $response_body"
+        
+        # التحقق من نجاح العملية
+        if [ "$http_code" -eq 200 ]; then
+          echo "✅ تم التحديث بنجاح!"
+          
+          # استخراج عدد الاستدعاءات الجديدة
+          new_recalls=$(echo "$response_body" | grep -o '"saved":[0-9]*' | cut -d':' -f2 || echo "0")
+          echo "🆕 عدد الاستدعاءات الجديدة: $new_recalls"
+          
+          if [ "$new_recalls" -gt 0 ]; then
+            echo "🚨 تم اكتشاف استدعاءات جديدة!"
+          else
+            echo "ℹ️ لا توجد استدعاءات جديدة"
+          fi
+        else
+          echo "❌ فشل في التحديث - كود الخطأ: $http_code"
+          echo "📄 تفاصيل الخطأ: $response_body"
+          exit 1
+        fi
+        
+    - name: Log Update Statistics
+      if: always()
+      run: |
+        echo "📈 إحصائيات التحديث:"
+        echo "🕐 وقت الانتهاء: $(date)"
+        echo "🔗 رابط المشروع: https://food-recalls-qatar.web.app"
+        echo "🔗 رابط API: https://us-central1-food-recalls-qatar.cloudfunctions.net/recalls"
+        
+    - name: Health Check
+      run: |
+        echo "🏥 فحص صحة النظام..."
+        
+        # فحص الواجهة الأمامية
+        frontend_status=$(curl -s -o /dev/null -w "%{http_code}" "https://food-recalls-qatar.web.app" || echo "000")
+        echo "🌐 حالة الواجهة الأمامية: $frontend_status"
+        
+        # فحص API
+        api_status=$(curl -s -o /dev/null -w "%{http_code}" "https://us-central1-food-recalls-qatar.cloudfunctions.net/recalls" || echo "000")
+        echo "🔌 حالة API: $api_status"
+        
+        if [ "$frontend_status" = "200" ] && [ "$api_status" = "200" ]; then
+          echo "✅ جميع الخدمات تعمل بشكل طبيعي"
+        else
+          echo "⚠️ تحذير: بعض الخدمات قد لا تعمل بشكل صحيح"
+        fi
