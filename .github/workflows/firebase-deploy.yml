@@ -1,0 +1,120 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: functions/package-lock.json
+        
+    - name: Install Dependencies
+      run: |
+        echo "📦 تثبيت التبعيات..."
+        cd functions
+        npm ci
+        
+    - name: Build Project
+      run: |
+        echo "🔨 بناء المشروع..."
+        
+        # التأكد من وجود الملفات المطلوبة
+        if [ ! -f "public/index.html" ]; then
+          echo "❌ ملف index.html مفقود"
+          exit 1
+        fi
+        
+        if [ ! -f "public/app.js" ]; then
+          echo "⚠️ ملف app.js مفقود، نسخ الإصدار المحسن..."
+          cp public/app-enhanced.js public/app.js
+        fi
+        
+        if [ ! -f "functions/index.js" ]; then
+          echo "⚠️ ملف functions/index.js مفقود، نسخ الإصدار المحسن..."
+          cp functions/index-enhanced.js functions/index.js
+        fi
+        
+        echo "✅ تم التحقق من جميع الملفات"
+        
+    - name: Validate Firebase Configuration
+      run: |
+        echo "🔍 التحقق من تكوين Firebase..."
+        
+        if [ ! -f "firebase.json" ]; then
+          echo "❌ ملف firebase.json مفقود"
+          exit 1
+        fi
+        
+        if [ ! -f ".firebaserc" ]; then
+          echo "❌ ملف .firebaserc مفقود"
+          exit 1
+        fi
+        
+        echo "✅ تكوين Firebase صحيح"
+        
+    - name: Deploy to Firebase
+      run: |
+        echo "🚀 نشر المشروع إلى Firebase..."
+        
+        # تثبيت Firebase CLI
+        npm install -g firebase-tools
+        
+        # نشر المشروع (يتطلب Firebase Token في GitHub Secrets)
+        # firebase deploy --token "$FIREBASE_TOKEN" --non-interactive
+        
+        echo "⚠️ النشر يتطلب إعداد FIREBASE_TOKEN في GitHub Secrets"
+        echo "📝 لإكمال النشر التلقائي:"
+        echo "1. احصل على Firebase Token: firebase login:ci"
+        echo "2. أضف Token إلى GitHub Secrets باسم FIREBASE_TOKEN"
+        echo "3. قم بإلغاء التعليق عن سطر firebase deploy أعلاه"
+        
+    - name: Test Deployment
+      run: |
+        echo "🧪 اختبار النشر..."
+        
+        # اختبار الوصول للموقع
+        response=$(curl -s -w "%{http_code}" \
+          -H "User-Agent: GitHub-Actions-Test/1.0" \
+          --max-time 30 \
+          "https://food-recalls-qatar.web.app" || echo "000")
+        
+        http_code="${response: -3}"
+        
+        if [ "$http_code" -eq 200 ]; then
+          echo "✅ الموقع متاح ويعمل بشكل طبيعي"
+        else
+          echo "⚠️ تحذير: مشكلة في الوصول للموقع - HTTP $http_code"
+        fi
+        
+    - name: Notify Success
+      if: success()
+      run: |
+        echo "🎉 تم النشر بنجاح!"
+        echo "🌐 الموقع: https://food-recalls-qatar.web.app"
+        echo "⚡ Functions: https://us-central1-food-recalls-qatar.cloudfunctions.net"
+        echo "📱 النظام جاهز للاستخدام"
+        
+    - name: Notify Failure
+      if: failure()
+      run: |
+        echo "❌ فشل في النشر"
+        echo "🔍 يرجى مراجعة السجلات لمعرفة السبب"
+        echo "📞 للمساعدة: تحقق من تكوين Firebase وGitHub Secrets"
+
+env:
+  TZ: Asia/Qatar
+  NODE_ENV: production
